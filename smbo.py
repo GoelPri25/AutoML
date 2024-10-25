@@ -2,21 +2,19 @@ import ConfigSpace
 from ConfigSpace import Constant
 import numpy as np
 import typing
-import random
-#from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from example_smbo import initial_perf, test_external_model
+
 import argparse
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import ConstantKernel as C, RBF
 import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder, FunctionTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import math
 from scipy.stats import norm
 
 import matplotlib.pyplot as plt
-from random_search import RandomSearch
+
 from sklearn.gaussian_process.kernels import Matern, ConstantKernel as C
 from surrogate_model import SurrogateModel
 
@@ -40,7 +38,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_space_file', type=str, default='lcdb_config_space_knn.json')
     parser.add_argument('--model_path', type=str, default='external_surrogate_model.pkl')
-    parser.add_argument('--configurations_performance_file', type=str, default='config_performances_dataset-6.csv')
+    parser.add_argument('--configurations_performance_file', type=str, default='config-performances/config_performances_dataset-6.csv')
     
     return parser.parse_args()
 
@@ -54,10 +52,10 @@ def clean_configuration(config_space, theta):
         default_values[key] = config_space.get_hyperparameter(key).default_value
     
     
-    # Step 2: Find missing keys in the partial configuration
+    # Find missing keys in the partial configuration
     missing_keys = [key for key in default_values.keys() if key not in theta]
     
-    # Step 3: Add missing keys with default values to the configuration
+    #Add missing keys with default values to the configuration
     for key in missing_keys:
         theta[key] = default_values[key]
         
@@ -78,7 +76,7 @@ class SequentialModelBasedOptimization(object):
         self.theta_inc_performance = None
         self.internal_surrogate_model = None
         self.result_performance = []
-        self.random_search = RandomSearch(self.config_space)
+        
         self.max_anchor = max_anchor
         self.all_performances = []
         self.ex_surrogate_class = ex_surrogate_class
@@ -195,22 +193,20 @@ class SequentialModelBasedOptimization(object):
         mu, sigma = model_pipeline.predict(theta, return_std=True)
         if f_star == None:
             f_star = mu
-        xi = 0.03  # Exploration parameter
-        f_star_exploration = f_star + xi
+        
         sigma = np.maximum(sigma, 1e-9)  # Avoid division by zero
         
-        sigma_noise = np.maximum(sigma, 1e-2)
+    
         # Calculate the Expected Improvement (EI)
-        # z = (f_star_exploration - mu) / sigma_noise
         z = (f_star - mu) / sigma
         
-        # ei = (f_star_exploration - mu) * norm.cdf(z) + sigma_noise * norm.pdf(z)
+        
         ei = (f_star- mu) * norm.cdf(z) + sigma * norm.pdf(z)
         
         return ei
         
     def optimize(self,  theta_new):
-        #performance = test_real_world_model(self.config_space, theta_new)
+    
         
         performance = self.ex_surrogate_class.external_surrogate_predict(theta_new)
         return performance
@@ -224,15 +220,6 @@ class SequentialModelBasedOptimization(object):
         :param run: A tuple (configuration, performance) where performance is error rate
         """
         
-        #adding random candidate to R for new exploration area to avoid stagnant behaviour
-        # random_candidate = self.config_space.sample_configuration().get_dictionary()  
-        
-        # candidate = clean_configuration(self.config_space, random_candidate)
-        
-        # random_cand_perf = smbo.optimize(candidate)
-        
-        # self.R.append((candidate, random_cand_perf))
-        
         self.R.append(run)
         
         
@@ -242,7 +229,7 @@ class SequentialModelBasedOptimization(object):
         
         self.result_performance.append(self.theta_inc_performance)
 
-import pickle
+
 
 class ExternalSurrogate():
     def __init__(self, args, config_space):
@@ -269,7 +256,7 @@ class ExternalSurrogate():
                 self.sg.config_space = config_space
                 theta_val = dict(config)
                 error_rate = self.sg.predict(theta_val)
-                print(error_rate)
+               
                 capital_phi.append((theta_val, error_rate))
                 
             return capital_phi
@@ -307,21 +294,23 @@ def eval_smbo(args, max_anchor, total_budget):
         budget_left = budget_left-1
     
         
-    return smbo.result_performance
+    return smbo
     
 
-def plot_value(total_budget, all_performances):
+def plot_value(total_budget, smbo):
     
     plt.figure(figsize=(6, 6))
-    plt.plot(range(total_budget), all_performances, color='blue', label='Iterative Best Performances so far')
+    plt.plot(range(total_budget), smbo.all_performances, color='black', label = 'All SMBO performances')
+    plt.plot(range(total_budget), smbo.result_performance, color='blue', label='Iterative Best Performances so far')
     
 
     
-    min_performance = min(all_performances)
+    min_performance = min(smbo.result_performance)
 
-    min_budget = all_performances.index(min_performance)
+    min_budget = smbo.result_performance.index(min_performance)
 
-    plt.scatter(min_budget, min_performance, color='red', zorder=5, label=' Best Performance')
+    plt.scatter(min_budget, min_performance, color='red', zorder=5)
+    
 
     # Add a horizontal line at the minimum performance point
     plt.axhline(y=min_performance, color='red', linestyle='--', label=f'Best Score: {min_performance:.6f}')
@@ -337,9 +326,10 @@ def plot_value(total_budget, all_performances):
     plt.yticks(yticks)
     plt.xlabel('Budget')
     plt.ylabel('Guassian Regressor Performance')
-    plt.title('Performances tracked during SMBO')
+    plt.title(f'Performances tracked during SMBO for anchor {smbo.max_anchor}')
     plt.grid(True)
-    plt.legend()
+    
+    plt.legend( loc='upper right')
     
     plt.tight_layout()
     plt.show()
@@ -348,6 +338,6 @@ if __name__ == "__main__":
     args = parse_args()
     max_anchor = 16000
     total_budget = 200
-    result_performances = eval_smbo(args, max_anchor=max_anchor, total_budget=total_budget)
-    plot_value(total_budget, result_performances)
+    smbo_obj = eval_smbo(args, max_anchor=max_anchor, total_budget=total_budget)
+    plot_value(total_budget, smbo_obj)
     
