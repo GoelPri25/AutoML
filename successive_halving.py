@@ -11,8 +11,7 @@ from surrogate_model import SurrogateModel
 from operator import itemgetter
 
 import math
-#can we change the value of 1 in the first question
-#what are the names of the datasets
+
 
 def identify_categorical_numerical( df):
         categorical_cols = []
@@ -37,29 +36,7 @@ def parse_args():
     
     return parser.parse_args()
 
-def input_preprocessor(X_df):
-    
-    categorical_cols, numerical_cols = identify_categorical_numerical(X_df)
-    
-    # Define transformers
-    categorical_transformer = OneHotEncoder(drop='first', handle_unknown='ignore')
-    numerical_transformer = StandardScaler()
 
-    # Create a preprocessing pipeline
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', numerical_transformer, numerical_cols),
-            ('cat', categorical_transformer, categorical_cols)
-        ]
-    )
-    return preprocessor
-
-def dynamic_preprocessor(X_df):
-    """
-    A wrapper for creating the preprocessor based on the data passed to the pipeline.
-    """
-    preprocessor = input_preprocessor(X_df)
-    return preprocessor
 
 def clean_configuration(config_space, theta):
     default_values = {}
@@ -115,16 +92,14 @@ class SuccessiveHalvingBasedOptimization(object):
     def create_initial_configurations(self) -> ConfigSpace.Configuration:
         """
 
-        :return: thetas: A size n vector, containing all configurations handling any missing columns from sample configs
+        :return: thetas: A dataframe, containing all configurations handling any missing columns from sample configs
         """
-        
-        #based on the sample space, finding the  iterations after which only one config will be remaining
         
         
         self.total_iterations = len(bin(self.total_samples)[2:])
         
         
-        candidates = [dict(self.config_space.sample_configuration()) for _ in range(self.total_samples)]  # You can adjust the number of samples
+        candidates = [dict(self.config_space.sample_configuration()) for _ in range(self.total_samples)]  
         
         #add default values in missing columns from sample configurations
         
@@ -145,16 +120,12 @@ class SuccessiveHalvingBasedOptimization(object):
         
     
     
-    def select_evenly_spaced_elements(self, lst, n):
-        step_size = (len(lst) - 1) / (n - 1)
-        return [round(i * step_size) for i in range(n)]
-     
     
     def get_anchors(self,full_training_size, total_iterations, threshold):
         n = full_training_size
         halved_values = [full_training_size]
         iteration = 1
-        while iteration <=total_iterations and int(n//2) > threshold:
+        while iteration <=total_iterations and int(n//2) >= threshold:
             
             n = int(n // 2)
             halved_values.append(n)
@@ -177,10 +148,6 @@ class SuccessiveHalvingBasedOptimization(object):
         self.possible_anchors = self.get_anchors(max(self.anchor_sizes), self.total_iterations, min(self.anchor_sizes))
         
     
-        #self.all_anchor_sizes = np.linspace(min(self.anchor_sizes), max(self.anchor_sizes), self.total_iterations-1, dtype=int)
-                 
-        #self.all_anchor_sizes = [500,1000,2000,4000,8000,16000]
-        
         iteration = 0
 
         current_performances_index = np.full(len(thetas), np.nan)
@@ -231,7 +198,7 @@ class SuccessiveHalvingBasedOptimization(object):
         
         df = pd.DataFrame(all_performances)
         
-        #df = pd.DataFrame(all_performances)
+     
         
         #giving names to create columns for dataframe to plot the values wrt performances and anchor
         df.columns = [f"Config_{i+1}" for i in range(len(all_performances[0]))]
@@ -244,7 +211,7 @@ class SuccessiveHalvingBasedOptimization(object):
             
 
         # Adding labels, title, and legend
-        plt.xlabel('Anchors in Successive Halving)')
+        plt.xlabel('Anchors in Successive Halving')
         plt.ylabel('Performance')
         plt.title('Successive Halving: Performance Progression')
         plt.xticks(ticks= list(range(len(anchors_travelled))),labels= anchors_travelled)  # Set iteration points on the x-axis
@@ -258,9 +225,9 @@ class SuccessiveHalvingBasedOptimization(object):
         plt.axhline(y=self.best_performance, color='red', linestyle='--', label=f'Best Score: {self.best_performance:.6f}')
         
 
-            # Add legend to show which line corresponds to which configuration
+            
         plt.yticks(yticks)
-        
+        # Add legend to show which line corresponds to which configuration
         plt.legend()
 
         # Show plot
@@ -275,10 +242,10 @@ def eval_successive(args, no_samples):
     
     s_h_method.initialize()
     thetas = s_h_method.create_initial_configurations()
+    
     all_performances, anchors_travelled = s_h_method.prune_update_optimize(thetas)
     
-    print(s_h_method.best_configuration)
-    print(s_h_method.best_performance)
+    
     
     s_h_method.plot_successive_halving(all_performances, anchors_travelled)
     return s_h_method
@@ -290,16 +257,5 @@ if __name__ == '__main__':
     print(s_h_method.best_configuration)
     print(s_h_method.best_performance)
     
-    # config_space = ConfigSpace.ConfigurationSpace.from_json(args.config_space_file)
-    # config_space.seed(42)
-    # s_h_method =  SuccessiveHalvingBasedOptimization(config_space=config_space)
-    
-    # s_h_method.initialize()
-    # thetas = s_h_method.create_initial_configurations()
-    # all_performances, anchors_travelled = s_h_method.prune_update_optimize(thetas)
-    
-    # print(s_h_method.best_configuration)
-    # print(s_h_method.best_performance)
-    
-    # s_h_method.plot_successive_halving(all_performances, anchors_travelled)
+
      
