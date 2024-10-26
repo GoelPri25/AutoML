@@ -31,6 +31,7 @@ import math
 from scipy.stats import norm
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 from random_search import RandomSearch
 from sklearn.gaussian_process.kernels import Matern, ConstantKernel as C
 from surrogate_model import SurrogateModel
@@ -51,13 +52,6 @@ def identify_categorical_numerical( df):
     
     
     
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--config_space_file', type=str, default='lcdb_config_space_knn.json')
-    parser.add_argument('--model_path', type=str, default='external_surrogate_model.pkl')
-    parser.add_argument('--configurations_performance_file', type=str, default='config-performances/config_performances_dataset-6.csv')
-    
-    return parser.parse_args()
 
 
 def clean_configuration(config_space, theta):
@@ -118,7 +112,8 @@ class SequentialModelBasedOptimization(object):
         
         best_value = min(capital_phi,key = lambda x: x[1])
         
-        self.theta_inc = best_value[0]  #initialise these values based on the first set of configuration
+        self.theta_inc = best_value[0] 
+        #initialise these values based on the first set of configuration
         self.theta_inc_performance = best_value[1] 
         
   
@@ -350,7 +345,7 @@ def identify_categorical_numerical( df):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_space_file', type=str, default='lcdb_config_space_knn.json')
-    parser.add_argument('--configurations_performance_file', type=str, default='config-performances/config_performances_dataset-6.csv')
+    parser.add_argument('--configurations_performance_file', type=str, default='config_performances_dataset-6.csv')
     
     return parser.parse_args()
 
@@ -541,7 +536,7 @@ class SuccessiveHalvingBasedOptimization(object):
        
 def eval_successive(args, no_samples):
     """
-    evaluate successive halving - finding best configuration
+    evaluate successive halving -finidng best configuraiton
     """
     config_space = ConfigSpace.ConfigurationSpace.from_json(args.config_space_file)
     config_space.seed(42)
@@ -592,6 +587,8 @@ def eval_smbo(args, max_anchor, total_budget,  s_h_method, best_sh_configuration
     budget_left = total_budget
     all_status = []
     all_indexes = []
+    i = 4
+    
     while budget_left:
         current_performances_index = np.full(len(sample_space), np.nan)
         smbo.fit_model()
@@ -608,12 +605,17 @@ def eval_smbo(args, max_anchor, total_budget,  s_h_method, best_sh_configuration
         all_status.append(current_performances_index)
         all_indexes.append(theta_new.name)
         budget_left = budget_left-1
-    
+        try:
+            best_index = smbo.theta_inc.name
+        except:
+            #if no theta identified, run the loop again, increasing the budget
+            budget_left = budget_left + 1
+            total_budget = total_budget + 1
     print(min(smbo.result_performance))
     plt.figure(figsize=(10, 6))
     df = pd.DataFrame(all_status)
     df.columns = [f"Config_{i}" for i in range(len(all_status[0]))]
-    best_index = smbo.theta_inc.name
+    
     
     
     df_sh = pd.DataFrame(s_h_method.all_performances)
@@ -632,7 +634,9 @@ def eval_smbo(args, max_anchor, total_budget,  s_h_method, best_sh_configuration
     plt.plot(list(range(max_len)), smbo_values, marker='o', label=f'SMBO : Config_{best_index}')
     
     plt.plot(list(range(max_len)), sh_values, marker='*', label=f'SH:Config_{best_sh_configuration.name}')
-    
+    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True, nbins=20))  # `nbins` controls how many ticks to display
+
+    # Rotate x-axis labels if necessary
     plt.xticks(ticks= list(range(max_len)),labels= list(range(max_len)))  # Set iteration points on the x-axis
     
    
@@ -662,14 +666,15 @@ def eval_smbo(args, max_anchor, total_budget,  s_h_method, best_sh_configuration
 
  
 if __name__ == '__main__':
+    #no of samples = 4000 with maximum anchor of 16000 and total budget for smbo is 30
     args = parse_args()
     no_samples = 4000
     
     s_h_method, best_sh_configuration, best_sh_performance = eval_successive(args, no_samples)
     
-    args = parse_args()
+    
     max_anchor = 16000
-    total_budget = 25
+    total_budget = 30
     result_performances = eval_smbo(args, max_anchor, total_budget,  s_h_method, best_sh_configuration, best_sh_performance)
     
     
