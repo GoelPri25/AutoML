@@ -1,6 +1,4 @@
-# AutoML
-# AutoML
-
+# AutoML Assignment 1
 ## Instructions
 
 To run experiments using AutoML, follow these steps.
