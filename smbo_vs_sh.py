@@ -11,14 +11,12 @@ from surrogate_model import SurrogateModel
 from operator import itemgetter
 
 import math
-#can we change the value of 1 in the first question
-#what are the names of the datasets
 import ConfigSpace
 from ConfigSpace import Constant
 import numpy as np
 import typing
 import random
-#from sklearn.model_selection import train_test_split
+
 from sklearn.pipeline import Pipeline
 import argparse
 from sklearn.gaussian_process import GaussianProcessRegressor
@@ -170,15 +168,6 @@ class SequentialModelBasedOptimization(object):
         configuration
         """
         
-        
-        # candidates = [self.config_space.sample_configuration().get_dictionary() for _ in range(20)]  
-        
-        # candidates = [clean_configuration(self.config_space, each_candidate) for each_candidate in candidates]
-        
-        # candidate_configs = pd.DataFrame([candidate for candidate in candidates])
-        
-        # theta = candidate_configs.iloc[::] 
-        
         # Calculate the expected improvement for each candidate
         thetas = self.sample_space.sample(n=20)
         ei_values = self.expected_improvement(self.internal_surrogate_model, self.theta_inc_performance, thetas)
@@ -209,22 +198,17 @@ class SequentialModelBasedOptimization(object):
         mu, sigma = model_pipeline.predict(theta, return_std=True)
         if f_star == None:
             f_star = mu
-        xi = 0.03  # Exploration parameter
-        f_star_exploration = f_star + xi
         sigma = np.maximum(sigma, 1e-9)  # Avoid division by zero
         
-        sigma_noise = np.maximum(sigma, 1e-2)
+        
         # Calculate the Expected Improvement (EI)
-        # z = (f_star_exploration - mu) / sigma_noise
         z = (f_star - mu) / sigma
         
-        # ei = (f_star_exploration - mu) * norm.cdf(z) + sigma_noise * norm.pdf(z)
         ei = (f_star- mu) * norm.cdf(z) + sigma * norm.pdf(z)
         
         return ei
         
     def optimize(self,  theta_new):
-        #performance = test_real_world_model(self.config_space, theta_new)
         
         performance = self.ex_surrogate_class.external_surrogate_predict(theta_new)
         return performance
@@ -238,15 +222,7 @@ class SequentialModelBasedOptimization(object):
         :param run: A tuple (configuration, performance) where performance is error rate
         """
         
-        #adding random candidate to R for new exploration area to avoid stagnant behaviour
-        # random_candidate = self.config_space.sample_configuration().get_dictionary()  
-        
-        # candidate = clean_configuration(self.config_space, random_candidate)
-        
-        # random_cand_perf = smbo.optimize(candidate)
-        
-        # self.R.append((candidate, random_cand_perf))
-        
+      
         self.R.append(run)
         
         
@@ -256,7 +232,7 @@ class SequentialModelBasedOptimization(object):
         
         self.result_performance.append(self.theta_inc_performance)
 
-import pickle
+
 
 class ExternalSurrogate():
     def __init__(self, args, config_space):
@@ -475,7 +451,7 @@ class SuccessiveHalvingBasedOptimization(object):
     def prune_update_optimize(self, thetas):
         """
         Finalize the anchor sizes to experiment considering the full training set size. 
-        After evaluation of the configuration using the model, find the top half of the perofrmances with best scores (in our case minimum error rates).
+        After evaluation of the configuration using the model, find the top half of the performances with best scores (in our case minimum error rates).
         Select the batch for next iteration with an increased anchor size
 
         :param thetas: all the initial set of sample configurations 
@@ -586,7 +562,6 @@ def eval_smbo(args, max_anchor, total_budget,  s_h_method, best_sh_configuration
     budget_left = total_budget
     all_status = []
     all_indexes = []
-    i = 4
     
     while budget_left:
         current_performances_index = np.full(len(sample_space), np.nan)
@@ -595,7 +570,6 @@ def eval_smbo(args, max_anchor, total_budget,  s_h_method, best_sh_configuration
         
         performance = smbo.optimize(theta_new)
         
-        #if performance < smbo.theta_inc_performance:
         current_performances_index[theta_new.name] = performance
         
         
