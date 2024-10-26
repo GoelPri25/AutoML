@@ -32,7 +32,7 @@ def identify_categorical_numerical( df):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_space_file', type=str, default='lcdb_config_space_knn.json')
-    parser.add_argument('--configurations_performance_file', type=str, default='config-performances/config_performances_dataset-6.csv')
+    parser.add_argument('--configurations_performance_file', type=str, default='config_performances_dataset-6.csv')
     
     return parser.parse_args()
 
