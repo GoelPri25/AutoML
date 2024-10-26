@@ -20,7 +20,6 @@ import typing
 import random
 #from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from example_smbo import initial_perf, test_external_model
 import argparse
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import ConstantKernel as C, RBF

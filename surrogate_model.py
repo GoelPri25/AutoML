@@ -84,16 +84,11 @@ class SurrogateModel:
         mse = mean_squared_error(y_test, y_pred)
         r2 = r2_score(y_test, y_pred)
 
-        #Step 8: Save the trained model for loading later
-        print('Saving the model')
-        with open("external_surrogate_model.pkl", 'wb') as f:
-            pickle.dump(model, f)
-
-        #Step 9: Compute spearman correlation
+        #Step 8: Compute spearman correlation
         self.spearman, pvalue = spearmanr(y_test, y_pred)
         print('Spearmans correlation:{}, p-value: {}'.format(self.spearman, pvalue))
         
-        #Step 10: Plot the spearman correlation
+        #Step 9: Plot the spearman correlation
         '''
         plt.scatter(y_test, y_pred)
         plt.xlabel('Hold out set')

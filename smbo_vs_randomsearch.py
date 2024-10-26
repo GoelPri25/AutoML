@@ -109,6 +109,6 @@ if __name__=='__main__':
     agg.call_smbo(4)
     agg.call_RS(4)
     #for smbo vs sh , please run smbo_vs_sh.py
-    #agg.plot_smbo_RS()
+    agg.plot_smbo_RS()
     #print('done')
     
