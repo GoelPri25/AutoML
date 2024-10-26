@@ -3,6 +3,7 @@ import smbo
 import example_run_experiment as RS
 import matplotlib.pyplot as plt
 import numpy as np
+import successive_halving
 
 
 def parse_args():
@@ -30,7 +31,7 @@ class Aggregator():
 
     def call_smbo(self, idx):
         for x in range(0,idx):
-            smbo_result = smbo.eval_smbo(self.args, max_anchor=self.args.max_anchor_size, total_budget=self.args.num_iterations)
+            smbo_result = smbo.eval_smbo(self.args, max_anchor=self.args.max_anchor_size, total_budget=self.args.num_iterations).result_performance
             self.smbo_result_mean.append(np.array(smbo_result))
         #print('smbo result: ', self.smbo_result, len(self.smbo_result))
 
@@ -40,9 +41,7 @@ class Aggregator():
             self.RS_result_mean.append(np.array(RS_result['random_search']))
 
 
-    def call_SH(self):
-        self.SH_result = None
-
+    
     def get_means_and_scores(self):
         #get a list of mean values over n iterations for each algorithm 
         mean_values_RS = [np.mean(scores) for scores in zip(*self.RS_result_mean)]
@@ -103,17 +102,13 @@ class Aggregator():
         plt.show()
 
         
-    
-    def plot_smbo_SH(self):
-        '''
-        Plots the results of SMBO and successive halving in one plot.
-        '''
-        return NotImplementedError
-
+   
+   
 if __name__=='__main__':
     agg = Aggregator()
     agg.call_smbo(4)
     agg.call_RS(4)
-    agg.plot_smbo_RS()
-    print('done')
+    #for smbo vs sh , please run smbo_vs_sh.py
+    #agg.plot_smbo_RS()
+    #print('done')
     
